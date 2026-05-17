@@ -190,6 +190,18 @@ export function getContactName(jid: string): string | undefined {
   return row?.name;
 }
 
+export function searchContacts(query: string) {
+  return db.prepare(`
+    SELECT jid, name FROM contacts
+    WHERE name LIKE ? OR jid LIKE ?
+    ORDER BY name LIMIT 20
+  `).all(`%${query}%`, `%${query}%`) as { jid: string; name: string }[];
+}
+
+export function getAllContacts() {
+  return db.prepare(`SELECT jid, name FROM contacts ORDER BY name`).all() as { jid: string; name: string }[];
+}
+
 export function getStats() {
   const row = stmts.dbStats.get() as any;
   return {

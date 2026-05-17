@@ -134,6 +134,43 @@ server.tool(
 );
 
 server.tool(
+  'whatsapp_find_contact',
+  'Search for a contact by name or phone number to get their chat ID (JID). Useful when a contact name shows as a number or @lid.',
+  {
+    query: z.string().describe('Name or phone number to search for (e.g. "Moiz" or "923112294157")'),
+  },
+  async ({ query }) => {
+    const contacts = db.searchContacts(query);
+
+    // Also check if the raw number exists as a JID
+    const cleanNumber = query.replace(/[^0-9]/g, '');
+    const directJid = cleanNumber ? `${cleanNumber}@s.whatsapp.net` : null;
+    const directMessages = directJid ? db.getMessages(directJid, 1) : [];
+
+    const lines: string[] = [];
+
+    if (contacts.length > 0) {
+      lines.push(`Found ${contacts.length} contact(s):`);
+      for (const c of contacts) {
+        const msgs = db.getMessages(c.jid, 1);
+        const hasMsgs = msgs.length > 0 ? ' ✅ has messages' : ' (no messages synced yet)';
+        lines.push(`\n👤 ${c.name}\n   JID: ${c.jid}${hasMsgs}`);
+      }
+    }
+
+    if (directJid && directMessages.length > 0 && !contacts.find(c => c.jid === directJid)) {
+      lines.push(`\nDirect JID match: ${directJid} ✅ has messages`);
+    }
+
+    if (lines.length === 0) {
+      return { content: [{ type: 'text', text: `No contact found for "${query}". They may not have a synced chat yet — WhatsApp only sends recent history on initial sync.` }] };
+    }
+
+    return { content: [{ type: 'text', text: lines.join('\n') }] };
+  },
+),
+
+server.tool(
   'whatsapp_search_messages',
   'Full-text search across ALL stored WhatsApp messages, including history going back years. Much faster and more complete than the cloud version.',
   {
