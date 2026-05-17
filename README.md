@@ -17,16 +17,36 @@ Connect your WhatsApp to Claude Desktop. **Everything stays on your machine** �
 
 ---
 
-## Setup (Fresh Machine — 3 commands)
+## Setup (Fresh Machine)
+
+### Windows — double-click installer
+
+1. Install **[Node.js LTS](https://nodejs.org)** if you don't have it
+2. `git clone https://github.com/khetsinghrajput/WhatsApp-MCP-Local.git`
+3. Open the cloned folder → double-click **`install.bat`**
+
+That's it. The batch file handles `npm install` and config automatically. No PowerShell, no manual editing.
+
+### Mac / Linux — terminal
 
 ```bash
 git clone https://github.com/khetsinghrajput/WhatsApp-MCP-Local.git
 cd WhatsApp-MCP-Local
+chmod +x install.sh && ./install.sh
+```
+
+### Manual (any platform)
+
+```bash
 npm install
 npm run setup
 ```
 
-`npm run setup` automatically finds Claude Desktop's config file on your machine (Windows, Mac, or Linux) and writes the correct entry. No manual path editing.
+> **Windows PowerShell error?** If you see "running scripts is disabled", run this once in PowerShell then retry:
+> ```powershell
+> Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force
+> ```
+> Or just use `install.bat` instead — it uses cmd.exe which never has this problem.
 
 Output looks like:
 ```
