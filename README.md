@@ -32,8 +32,10 @@ That's it. The batch file handles `npm install` and config automatically. No Pow
 ```bash
 git clone https://github.com/khetsinghrajput/WhatsApp-MCP-Local.git
 cd WhatsApp-MCP-Local
-chmod +x install.sh && ./install.sh
+make install
 ```
+
+> No `make`? Use: `chmod +x install.sh && ./install.sh`
 
 ### Manual (any platform)
 
