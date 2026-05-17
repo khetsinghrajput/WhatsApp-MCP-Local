@@ -17,83 +17,43 @@ Connect your WhatsApp to Claude Desktop. **Everything stays on your machine** �
 
 ---
 
-## Setup (Fresh Machine)
-
-### 1 — Clone the repo
+## Setup (Fresh Machine — 3 commands)
 
 ```bash
 git clone https://github.com/khetsinghrajput/WhatsApp-MCP-Local.git
 cd WhatsApp-MCP-Local
 npm install
+npm run setup
 ```
 
-### 2 — Find your full folder path
+`npm run setup` automatically finds Claude Desktop's config file on your machine (Windows, Mac, or Linux) and writes the correct entry. No manual path editing.
 
-**Windows:** Open the folder in File Explorer, click the address bar — copy the full path.
-It will look like: `C:\Users\YourName\WhatsApp-MCP-Local`
+Output looks like:
+```
+✅ Done! Config written:
+   Server  : whatsapp
+   Command : C:\Program Files\nodejs\node.exe
+   Script  : C:\Users\You\WhatsApp-MCP-Local\src\index.ts
 
-**Mac/Linux:** Run `pwd` in the terminal inside the folder.
-
-### 3 — Add to Claude Desktop config
-
-Open the config file:
-- **Windows:** `C:\Users\YourName\AppData\Roaming\Claude\claude_desktop_config.json`
-- **Mac:** `~/Library/Application Support/Claude/claude_desktop_config.json`
-
-If the file doesn't exist, create it. Add this (replace the path with yours):
-
-**Windows:**
-```json
-{
-  "mcpServers": {
-    "whatsapp": {
-      "command": "C:/Users/YourName/WhatsApp-MCP-Local/node_modules/.bin/tsx.cmd",
-      "args": ["C:/Users/YourName/WhatsApp-MCP-Local/src/index.ts"]
-    }
-  }
-}
+📋 Next steps:
+   1. Fully quit Claude Desktop (system tray → Quit)
+   2. Reopen Claude Desktop
+   3. Your browser opens at http://localhost:3000 — scan the QR with WhatsApp
+   4. Done! Use whatsapp_status in Claude to confirm.
 ```
 
-> ⚠️ **Windows paths must use forward slashes `/` not backslashes `\`**
+### After setup
 
-**Mac/Linux:**
-```json
-{
-  "mcpServers": {
-    "whatsapp": {
-      "command": "node",
-      "args": [
-        "/Users/YourName/WhatsApp-MCP-Local/node_modules/tsx/dist/cli.cjs",
-        "/Users/YourName/WhatsApp-MCP-Local/src/index.ts"
-      ]
-    }
-  }
-}
-```
+1. **Quit and reopen Claude Desktop**
+2. Browser auto-opens at `http://localhost:3000` — scan the QR
+3. Wait a few minutes for history to sync
 
-> If the file already has a `"preferences"` section, add `"mcpServers"` alongside it — don't replace the whole file.
-
-### 4 — Restart Claude Desktop
-
-Fully quit Claude Desktop (system tray → right-click → **Quit**), then reopen it.
-
-### 5 — Scan the QR code
-
-Your browser will automatically open at `http://localhost:3000`.
-
-On your phone: **WhatsApp → Settings → Linked Devices → Link a Device** → scan the QR.
-
-### 6 — Wait for history sync
-
-Watch the status in Claude:
-
+Check progress in Claude:
 ```
 whatsapp_status
 → 📦 1,240 messages stored across 108 chats
 → 📅 History goes back to: 25/05/2025
 ```
-
-The count will grow as WhatsApp syncs older messages in the background.
 
 ---
 

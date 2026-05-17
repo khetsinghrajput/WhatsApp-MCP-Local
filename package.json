@@ -7,6 +7,7 @@
     "whatsapp-mcp": "./src/index.ts"
   },
   "scripts": {
+    "setup": "node setup.mjs",
     "start": "tsx src/index.ts",
     "dev": "tsx watch src/index.ts",
     "import": "tsx src/import.ts"
