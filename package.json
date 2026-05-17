@@ -1,0 +1,29 @@
+{
+  "name": "whatsapp-mcp",
+  "version": "1.0.0",
+  "description": "Local WhatsApp MCP server — everything stays on your machine",
+  "type": "module",
+  "bin": {
+    "whatsapp-mcp": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "@whiskeysockets/baileys": "^6.7.18",
+    "better-sqlite3": "^11.7.0",
+    "open": "^10.1.0",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4",
+    "tsx": "^4.19.2",
+    "zod": "^3.24.4"
+  },
+  "devDependencies": {
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/node": "^22.10.0",
+    "@types/qrcode": "^1.5.5",
+    "typescript": "^5.7.2"
+  }
+}
