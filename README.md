@@ -109,13 +109,13 @@ WhatsApp only sends recent history during initial sync. To get older messages:
 First find the contact's JID using `whatsapp_find_contact "Their Name"` in Claude, then:
 
 ```bash
-npm run import -- "C:/path/to/WhatsApp Chat with Moiz Ada.txt" "923112294157@s.whatsapp.net" "Moiz Ada"
+npm run import -- "C:/path/to/WhatsApp Chat with John Doe.txt" "923001234567@s.whatsapp.net" "John Doe"
 ```
 
 The importer shows:
 ```
 ✅ Import complete!
-   Contact  : Moiz Ada
+   Contact  : John Doe
    Messages : 1,847 imported
    Range    : 15/03/2023 → 17/05/2026
 

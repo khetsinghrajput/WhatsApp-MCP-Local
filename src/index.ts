@@ -137,7 +137,7 @@ server.tool(
   'whatsapp_find_contact',
   'Search for a contact by name or phone number to get their chat ID (JID). Useful when a contact name shows as a number or @lid.',
   {
-    query: z.string().describe('Name or phone number to search for (e.g. "Moiz" or "923112294157")'),
+    query: z.string().describe('Name or phone number to search for (e.g. "John" or "923001234567")'),
   },
   async ({ query }) => {
     const contacts = db.searchContacts(query);

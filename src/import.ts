@@ -2,7 +2,7 @@
  * WhatsApp Chat Export Importer
  *
  * Usage:
- *   npm run import -- "C:/path/to/WhatsApp Chat with Moiz Ada.txt" "923112294157@s.whatsapp.net" "Moiz Ada"
+ *   npm run import -- "C:/path/to/WhatsApp Chat with John Doe.txt" "923001234567@s.whatsapp.net" "John Doe"
  *
  * Export the chat from WhatsApp on your phone:
  *   Chat → ⋮ → More → Export Chat → Without Media → save the .txt file
@@ -122,7 +122,7 @@ Usage:
   npm run import -- "<path-to-txt>" "<jid>" "<contact-name>"
 
 Example:
-  npm run import -- "C:/Users/You/Downloads/WhatsApp Chat with Moiz Ada.txt" "923112294157@s.whatsapp.net" "Moiz Ada"
+  npm run import -- "C:/Users/You/Downloads/WhatsApp Chat with John Doe.txt" "923001234567@s.whatsapp.net" "John Doe"
 
 How to export a chat from WhatsApp (on your phone):
   1. Open the chat
