@@ -10,13 +10,26 @@ import qrcode from 'qrcode';
 import path from 'path';
 import fs from 'fs';
 import * as db from './database.js';
-import { startSetupServer, pushQR, pushConnected } from './setup.js';
+import { startSetupServer, isSetupServerRunning, pushQR, pushConnected, pushStatus } from './setup.js';
 import { DATA_DIR } from './database.js';
 
 const SESSIONS_DIR = path.join(DATA_DIR, 'session');
 fs.mkdirSync(SESSIONS_DIR, { recursive: true });
 
-const silent = pino({ level: 'silent' });
+// Set WA_DEBUG=1 in the MCP env to see Baileys logs on stderr (Claude Desktop MCP logs).
+const silent = pino({ level: process.env.WA_DEBUG ? 'debug' : 'silent' }, process.stderr);
+
+// Disconnect codes that mean the stored session is unusable and must be re-paired.
+const RESET_SESSION_CODES = new Set<number>([
+  DisconnectReason.loggedOut,          // 401: unlinked from phone, or linking rejected
+  DisconnectReason.badSession,         // 500: corrupted / half-written creds
+  DisconnectReason.multideviceMismatch // 411
+]);
+
+function resetSession() {
+  fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
+  fs.mkdirSync(SESSIONS_DIR, { recursive: true });
+}
 
 export type WaStatus = 'startup' | 'qr' | 'connected' | 'disconnected';
 
@@ -73,13 +86,25 @@ function toMsg(jid: string, msg: proto.IWebMessageInfo) {
 // ── Main init ─────────────────────────────────────────────────────────────────
 export async function initWhatsApp(): Promise<void> {
   const { state, saveCreds } = await useMultiFileAuthState(SESSIONS_DIR);
-  const { version } = await fetchLatestBaileysVersion();
-
-  // If no credentials exist, show the QR setup page
-  const isNewSession = !fs.existsSync(path.join(SESSIONS_DIR, 'creds.json'));
-  if (isNewSession) {
-    startSetupServer();
+  const { version, isLatest } = await fetchLatestBaileysVersion();
+  if (!isLatest) {
+    console.error('[whatsapp-mcp] Could not fetch latest WA Web version, using bundled default');
   }
+
+  // A creds.json can exist without a completed pairing (e.g. a scan that WhatsApp
+  // rejected), so check the "registered" flag rather than the file's existence.
+  const isNewSession = !state.creds.registered;
+  if (isNewSession && !(await startSetupServer())) {
+    // Another instance (Claude Desktop often starts two) owns the QR page. Two processes
+    // pairing into the same session folder overwrite each other's keys, so wait for it.
+    console.error('[whatsapp-mcp] Another instance is pairing; waiting for it to finish');
+    status = 'disconnected';
+    setTimeout(() => initWhatsApp(), 10000);
+    return;
+  }
+
+  // Drop listeners from the previous socket before reconnecting
+  socket?.ev.removeAllListeners(undefined as any);
 
   socket = makeWASocket({
     version,
@@ -105,21 +130,40 @@ export async function initWhatsApp(): Promise<void> {
     }
     if (connection === 'close') {
       const code = (lastDisconnect?.error as Boom)?.output?.statusCode;
-      const loggedOut = code === DisconnectReason.loggedOut;
-      if (loggedOut) {
-        status = 'disconnected';
+      const reason = lastDisconnect?.error?.message ?? 'unknown';
+      console.error(`[whatsapp-mcp] Connection closed (code ${code}): ${reason}`);
+      status = 'disconnected';
+
+      if (code === DisconnectReason.connectionReplaced) {
+        // 440: another process is using this session (e.g. a second MCP instance).
+        // Reconnecting would just fight it in a loop.
+        console.error('[whatsapp-mcp] Session opened elsewhere; not reconnecting. Make sure only one instance runs.');
+        pushStatus('This session was opened by another instance. Close other copies and restart Claude.', true);
         socket = null;
-        // Remove local auth so user can re-pair
-        fs.rmSync(SESSIONS_DIR, { recursive: true, force: true });
-        fs.mkdirSync(SESSIONS_DIR, { recursive: true });
-      } else {
-        setTimeout(() => initWhatsApp(), 3000);
+        return;
       }
+
+      if (code !== undefined && RESET_SESSION_CODES.has(code)) {
+        // Previously this wiped the session and then stopped, leaving the server
+        // stuck with no QR. Wipe and restart so a fresh QR is generated.
+        resetSession();
+        if (isSetupServerRunning()) {
+          pushStatus('Linking failed, generating a new QR code… Remove stale entries under Linked Devices on your phone, then scan again.', true);
+        }
+        setTimeout(() => initWhatsApp(), 3000);
+        return;
+      }
+
+      // 515 restartRequired (normal right after a successful scan), 408 QR timeout,
+      // network drops, etc. Reconnect; the setup server is reused, not restarted.
+      setTimeout(() => initWhatsApp(), 3000);
     } else if (connection === 'open') {
       status = 'connected';
       phoneNumber = socket?.user?.id?.split(':')[0] ?? null;
       console.error(`[whatsapp-mcp] Connected as +${phoneNumber}`);
-      if (isNewSession) pushConnected(phoneNumber ?? '');
+      // The socket restarts after pairing (515), so isNewSession is false here.
+      // Notify the setup page whenever it's open instead.
+      if (isSetupServerRunning()) pushConnected(phoneNumber ?? '');
     }
   });
 
