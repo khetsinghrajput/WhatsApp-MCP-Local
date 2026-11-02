@@ -45,10 +45,17 @@ function page() {
     const evts = new EventSource('/events');
     evts.onmessage = e => {
       const d = JSON.parse(e.data);
+      const st = document.getElementById('status');
       if (d.qr) {
         document.getElementById('qr').innerHTML =
           '<img src="' + d.qr + '" width="240" height="240" alt="QR">';
-        document.getElementById('status').textContent = 'Waiting for scan…';
+        st.textContent = 'Waiting for scan…';
+        st.style.color = '#25D366';
+      }
+      if (d.status) {
+        st.textContent = d.status;
+        st.style.color = d.error ? '#ff6b6b' : '#25D366';
+        if (d.error) document.getElementById('qr').innerHTML = '<div class="spinner">⏳</div>';
       }
       if (d.connected) {
         document.getElementById('qr').innerHTML = '<div style="font-size:64px">✅</div>';
@@ -62,31 +69,48 @@ function page() {
 </html>`;
 }
 
-export function startSetupServer(): void {
-  server = http.createServer((req, res) => {
-    if (req.url === '/events') {
-      res.writeHead(200, {
-        'Content-Type': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        Connection: 'keep-alive',
-      });
-      SSE_CLIENTS.push(res);
-      // Send current QR immediately if we have one
-      if (currentQr) pushEvent({ qr: currentQr });
-      req.on('close', () => {
-        const idx = SSE_CLIENTS.indexOf(res);
-        if (idx >= 0) SSE_CLIENTS.splice(idx, 1);
-      });
-      return;
-    }
-    res.writeHead(200, { 'Content-Type': 'text/html' });
-    res.end(page());
-  });
+export function isSetupServerRunning(): boolean {
+  return server !== null;
+}
 
-  server.listen(3000, () => {
-    console.error('[whatsapp-mcp] Opening setup page at http://localhost:3000');
-    open('http://localhost:3000').catch(() => {
-      console.error('[whatsapp-mcp] Could not open browser — visit http://localhost:3000 manually');
+// Resolves true if this process owns the setup page, false if port 3000 is taken.
+export function startSetupServer(): Promise<boolean> {
+  if (server) return Promise.resolve(true); // reconnects must reuse the existing page, not bind :3000 again
+  return new Promise((resolve) => {
+    server = http.createServer((req, res) => {
+      if (req.url === '/events') {
+        res.writeHead(200, {
+          'Content-Type': 'text/event-stream',
+          'Cache-Control': 'no-cache',
+          Connection: 'keep-alive',
+        });
+        SSE_CLIENTS.push(res);
+        // Send current QR immediately if we have one
+        if (currentQr) pushEvent({ qr: currentQr });
+        req.on('close', () => {
+          const idx = SSE_CLIENTS.indexOf(res);
+          if (idx >= 0) SSE_CLIENTS.splice(idx, 1);
+        });
+        return;
+      }
+      res.writeHead(200, { 'Content-Type': 'text/html' });
+      res.end(page());
+    });
+
+    server.on('error', (err: NodeJS.ErrnoException) => {
+      // Never let a port clash crash the MCP process
+      console.error(`[whatsapp-mcp] Setup page could not start: ${err.code ?? err.message}` +
+        (err.code === 'EADDRINUSE' ? ' (port 3000 in use; another instance may already be showing the QR)' : ''));
+      server = null;
+      resolve(false);
+    });
+
+    server.listen(3000, () => {
+      console.error('[whatsapp-mcp] Opening setup page at http://localhost:3000');
+      open('http://localhost:3000').catch(() => {
+        console.error('[whatsapp-mcp] Could not open browser — visit http://localhost:3000 manually');
+      });
+      resolve(true);
     });
   });
 }
@@ -95,6 +119,12 @@ export function pushQR(qrDataUrl: string): void {
   currentQr = qrDataUrl;
   statusText = 'Waiting for scan…';
   pushEvent({ qr: qrDataUrl });
+}
+
+export function pushStatus(text: string, error = false): void {
+  statusText = text;
+  currentQr = null; // the old QR is no longer valid
+  pushEvent({ status: text, error });
 }
 
 export function pushConnected(phone: string): void {
